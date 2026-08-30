@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/icon.svg" width="100" height="80" alt="Claude CoLearn icon">
+
 # Claude CoLearn
 
 **A Claude Code power tool for learning *anything* properly.**
