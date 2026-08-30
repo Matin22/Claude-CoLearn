@@ -2,10 +2,11 @@
 /**
  * vault.mjs — the filesystem half of /recap.
  *
- * /recap writes ONE distilled study note into an Obsidian vault. The prose is
- * the model's job; everything that touches the filesystem is this script's:
- * finding vaults, copying diagrams in so `![[...]]` resolves, creating parent
- * folders, and refusing to silently clobber an existing note.
+ * /recap writes ONE distilled study note — into an Obsidian vault, or a plain
+ * local folder if Obsidian isn't in use. The prose is the model's job;
+ * everything that touches the filesystem is this script's: finding vaults,
+ * copying diagrams in so the embed resolves, creating parent folders, and
+ * refusing to silently clobber an existing note.
  *
  * Prints readable diagnostics and never throws — the caller is a language
  * model, not a shell script.

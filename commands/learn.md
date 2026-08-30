@@ -3,11 +3,11 @@ description: Bind this and future sessions to one theme note in Obsidian
 argument-hint: "[vault] <folder>/<Theme>.md   (or just a theme name)"
 ---
 
-Bind a learning **theme** to one Obsidian note. Everything taught from now on deepens that single note instead of scattering dated ones.
+Bind a learning **theme** to one note — in an Obsidian vault, or a plain local file if you're not using Obsidian. Everything taught from now on deepens that single note instead of scattering dated ones.
 
 Steps:
 
-1. If the user gave a full `<vault> <path>`, bind it directly. If they gave only a theme name or a partial path, run `node .claude/skills/recap/vault.mjs list` and ask (ungraded `AskUserQuestion`) which vault and folder, offering the real folders from that output.
+1. If the user gave a full `<vault> <path>`, bind it directly. If they gave only a theme name or a partial path, run `node .claude/skills/recap/vault.mjs list` and ask (ungraded `AskUserQuestion`) where to bind it — **"Just this project — no Obsidian" is a real option, offer it alongside whatever vaults `list` reported** (or skip straight to it if none were found). For local, pass the project root as `<vault>` to `theme.mjs bind` below.
 
 2. Bind it:
 

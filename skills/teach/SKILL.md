@@ -1,6 +1,6 @@
 ---
 name: teach
-description: Teach the user anything so it actually locks in and is understood, not just memorized. Use ANY time you're explaining or teaching them something — even a quick explanation. Built on two evidence-backed teaching principles — unconditional truths first, and always show how a fact could have been discovered — plus a visual on the live Lesson Board for every idea that has a shape.
+description: Teach the user anything so it actually locks in and is understood, not just memorized. Use ANY time you're explaining or teaching them something — even a quick explanation. Built on two evidence-backed teaching principles — unconditional truths first, and always show how a fact could have been discovered — plus a visual for every idea that has a shape.
 ---
 
 # Teaching
@@ -86,7 +86,7 @@ When unsure, lean Socratic for things they can clearly reason about; otherwise n
 
 The two principles decide *what* to say. These decide *how* — each is a cheap move with a large effect, and most steps want two or three of them.
 
-- **Dual coding — a picture for anything with a shape.** Verbal and visual are separate channels; an idea on both is understood better and remembered longer. This is not optional decoration: invoke the **`visualize`** skill and put the diagram on the Lesson Board. See *Visuals* below.
+- **Dual coding — a picture for anything with a shape.** Verbal and visual are separate channels; an idea on both is understood better and remembered longer. This is not optional decoration: invoke the **`visualize`** skill. See *Visuals* below.
 - **Concrete before abstract.** Lead with one specific instance the learner can hold — this coin flip, this sentence, this cell, this bar of music, these actual numbers — then lift it to the general statement. The general statement alone is a rule to memorize; the instance is what makes it derivable.
 - **Worked example → completion → independent.** For anything procedural — a derivation, a proof, a translation, a chord voicing, a titration, a legal argument, a diagnosis — do not jump from explanation to "now you try." Work one fully, then give one with the middle blanked out, then one they do alone. Novices learn far more from a worked example than from an unassisted problem; the support gets withdrawn as they stop needing it.
 - **Contrast cases and boundaries.** Show what the thing *isn't*, right beside what it is: drop a condition and show what breaks, or put a near-miss next to the real case. Definitions are learned from their edges — this is what turns a definition into a usable one.
@@ -97,19 +97,17 @@ The two principles decide *what* to say. These decide *how* — each is a cheap 
 
 Verbal and visual are separate channels, and an idea carried by both lands harder than one carried by either alone. But the terminal renders no images, no mermaid, and no LaTeX — so without a deliberate step, visuals simply never happen:
 
-1. **At the start of Phase 3**, start the board and tell them where it is, once. With a theme bound, `theme.mjs current` prints the board path to use — it sits beside the theme note so both open together:
-   `node .claude/skills/visualize/board.mjs start <vault> --path "<board path>" --title "<topic>"`
-2. **The plan's dependency graph goes on the board** as the first entry, plus a Unicode sketch in the reply itself.
-3. **Every node with a shape gets a visual** — structure, direction, relationship, geometry, containment, order. Invoke `visualize`; put a small Unicode sketch in the reply and the real diagram on the board.
-4. **Display math goes to the board too.** `$$…$$` in the terminal is unreadable source. On the board it's typeset.
+1. **The plan's dependency graph gets a Unicode sketch** in the reply, right where you present the plan.
+2. **Every node with a shape gets a visual** — structure, direction, relationship, geometry, containment, order. Invoke `visualize`: a small Unicode sketch always, and — for anything worth a properly laid-out rendering — a real PNG via `mermaid-maker`/`svg-maker`, saved into `viz/` with the path mentioned in the reply.
+3. **Display math gets written as readable plain text in the reply** (`α`, `x²`, words where Unicode falls short) — never a raw `$$…$$` fence, which reaches the learner as literal source.
 
-If a lesson with structural content reaches its end and the board is empty, the teaching failed on this axis regardless of how good the prose was.
+If a lesson with structural content reaches its end with no sketches and no rendered diagrams at all, the teaching failed on this axis regardless of how good the prose was.
 
-Which vault to use: if a theme is bound, it already answers this. Otherwise ask once, early, offering what `node .claude/skills/recap/vault.mjs list` reports, and reuse that answer for the whole session.
+No vault, no board, nothing to set up first — this all happens inline, in the session, from the first reply.
 
 ## The theme note — read it before you teach
 
-Learning here is organised by **theme**, not by session. One Obsidian note holds everything on a subject and gets deeper each sitting, rather than accumulating dated fragments. A theme may be bound already:
+Learning here is organised by **theme**, not by session. One note — in an Obsidian vault, or a plain local file if you're not using Obsidian — holds everything on a subject and gets deeper each sitting, rather than accumulating dated fragments. A theme may be bound already:
 
 ```bash
 node .claude/skills/recap/theme.mjs current
@@ -176,7 +174,7 @@ The highest-leverage step. With their level and goal in hand, genuinely reason o
 **Then present the plan — always, before any teaching:**
 
 1. **The approach, in prose.** What we'll cover, in what order, and why *this* way given where their edge sits and what they're reaching for.
-2. **The dependency map.** The backbone as a DAG: unconditional truths at the roots, each derived node hanging off what it depends on, the goal as the sink. A Unicode sketch in the reply, and the mermaid version pushed to the board. Keep it small — few nodes, short labels. A map, not the territory.
+2. **The dependency map.** The backbone as a DAG: unconditional truths at the roots, each derived node hanging off what it depends on, the goal as the sink. A Unicode sketch in the reply — and if it's genuinely dense, a `mermaid-maker` rendering saved to `viz/` too. Keep it small — few nodes, short labels. A map, not the territory.
 
 **Stress-test the roots before presenting.** For every node you're treating as foundational: is this genuinely an unconditional truth *for this learner*, or a disguised theorem that derives from something simpler they'd accept at face value? If it derives, push it down and extend the map. Roots are far easier to audit in a drawn map than mid-flow.
 
@@ -208,8 +206,8 @@ When the arc reaches its goal or the learner winds down, **offer `/recap`** — 
 
 ## Where things render — write for the destination
 
-The terminal renders **no LaTeX, no mermaid, and no images**. Obsidian renders all three. So:
+The terminal renders **no LaTeX, no mermaid, and no images**. So:
 
 - **In the terminal**, write math so it reads as plain text: Unicode where it's clean (`α`, `∫`, `∂`, `ℝ`, `⇒`, `x²`), words where it isn't. `$\alpha$` reaches them as the literal characters `$\alpha$` — that's worse, not more rigorous.
-- **On the Lesson Board and in the `/recap` note**, use full LaTeX (`$f(x)$`, `$$…$$`). It's typeset there, and the note is what they'll re-read.
-- Anything genuinely visual belongs on the board, not in the reply. The reply gets a Unicode thumbnail.
+- **In the `/recap` note**, use full LaTeX (`$f(x)$`, `$$…$$`). It's typeset in Obsidian, and is still the correct standard notation even in a plain viewer — and the note is what they'll re-read.
+- Anything genuinely visual belongs in `viz/` as a rendered file, not in the reply as raw mermaid/SVG source. The reply gets a Unicode thumbnail.

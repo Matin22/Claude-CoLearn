@@ -1,11 +1,11 @@
 ---
 name: recap
-description: Fold a finished teaching session into the bound theme note in the user's Obsidian vault, or write a new standalone revision note if no theme is bound — the dependency graph, the ideas, the rediscovery path, worked examples, and the mistakes caught — then publish the session's diagrams alongside it. Use when the user runs /recap, or says they want to save, write up, or note down what was just taught.
+description: Fold a finished teaching session into the bound theme note, or write a new standalone revision note if no theme is bound — the dependency graph, the ideas, the rediscovery path, worked examples, and the mistakes caught — then publish the session's diagrams alongside it. Works against an Obsidian vault or a plain local file; Obsidian is never required. Use when the user runs /recap, or says they want to save, write up, or note down what was just taught.
 ---
 
 # Recap
 
-Turn a teaching session into **one note the learner can reload their understanding from months later**, and put it in their Obsidian vault.
+Turn a teaching session into **one note the learner can reload their understanding from months later**.
 
 This is not a transcript, a log, or a summary of the conversation. Nobody re-reads a conversation. The note is a **compressed artifact of the understanding**, written so that a person who never saw the session — including the learner, after forgetting all of it — can rebuild the ideas from the note alone.
 
@@ -52,7 +52,12 @@ node .claude/skills/recap/vault.mjs list
 
 This prints every Obsidian vault registered on the machine with its folders, its attachment folder, and its link style. Do not guess vault paths — the registry is the only reliable source.
 
-Ask (ungraded `AskUserQuestion`) which vault and which folder, offering the real folders from that output as options. Include a sensible default as the first option, inferred from the vault's own folder names and the topic — an existing folder that already holds notes of this kind beats a new one. Ask for the **note title** in the same call if it isn't obvious.
+**Obsidian is optional — always offer a local option too, and don't lead with the vault question as if it were required.** Ask (ungraded `AskUserQuestion`) where to write, with **"Just this project — no Obsidian"** as a real first-class option alongside whatever vaults `list` reported. If it reported none at all, skip the question's Obsidian half entirely and go straight to local.
+
+- **Obsidian**: ask which vault and which folder, offering the real folders from that output as options. Include a sensible default as the first option, inferred from the vault's own folder names and the topic — an existing folder that already holds notes of this kind beats a new one.
+- **Local**: use the project root as `<vault>` for the commands below (e.g. `node .claude/skills/recap/vault.mjs new "$(pwd)" "notes/<Title>.md"`) — no code change needed, `vault.mjs`/`theme.mjs` accept any existing directory, not only a registered vault. Without a real `.obsidian/app.json` there, they default to plain `![]()`/`[]()` markdown links instead of wikilinks, which is what a bare Markdown file needs.
+
+Ask for the **note title** in the same call if it isn't obvious.
 
 Then reserve the path:
 
@@ -69,18 +74,25 @@ Once it's written, offer to bind it as a theme so the next session continues it 
 node .claude/skills/recap/theme.mjs bind "<vault>" "<folder>/<Title>.md"
 ```
 
-### 3. Publish the diagrams into the vault
+### 3. Publish the diagrams
 
-Any diagram rendered during the session is sitting in `viz/`, which is almost certainly *not* inside the vault. Copy them in, and take the embed text from the output:
+Any diagram rendered during the session is sitting in `viz/`. List what's there:
 
 ```bash
 node .claude/skills/recap/vault.mjs viz
-node .claude/skills/recap/vault.mjs attach "<vault>" viz/<file>.png viz/<file>.png
+```
+
+**Obsidian vault:** copy each file in and take the embed text from the output:
+
+```bash
+node .claude/skills/recap/vault.mjs attach "<vault>" viz/<file>.png
 ```
 
 `attach` prints the exact embed line for each file, matched to that vault's link style. Paste those lines into the note where they belong.
 
-**Inline ```mermaid``` blocks need no publishing** — they are text, they travel with the note, and Obsidian renders them natively. Prefer them; only rendered PNGs need `attach`.
+**Local note:** the image is already inside the project, so don't copy it — just reference it with a standard markdown image link, computed relative to the note's own folder, e.g. `![The forces on a suspended mass](../viz/<file>.png)` for a note one folder deep, or `![...](viz/<file>.png)` for a note at the project root.
+
+**Inline ```mermaid``` blocks need no publishing** — they are text, they travel with the note, and Obsidian and GitHub both render them natively. Prefer them; only rendered PNGs need `attach` (or a relative link, for a local note).
 
 ### 4. Write — or merge into — the note
 
@@ -103,6 +115,8 @@ Keep anything the learner wrote themselves. If you must contradict something alr
 
 
 **Match the vault's own conventions.** For a *new* note, read a sibling note, or the vault's templates folder if it has one, before writing — use its frontmatter keys and its section names rather than inventing parallel ones. A vault that calls this section "Key ideas" should get "Key ideas", not "Core concepts". The skeleton below is a starting point, not a form to fill in: **cut any section the session didn't earn**, and never leave an empty heading behind.
+
+**Writing a local note (no Obsidian)?** The `> [!abstract]` callout syntax and `[[wikilink]]`s below are Obsidian-specific and render as dead text everywhere else. Use a plain `>` blockquote instead of a callout, and either drop the **Links** section or write a plain relative path (`[related note](related-note.md)`) instead of a wikilink.
 
 ````markdown
 ---

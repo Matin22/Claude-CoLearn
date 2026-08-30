@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: "Put a picture in the lesson — a dependency graph, flow, sequence, state machine, tree, comparison, or a spatial/geometric figure (coordinate geometry, vectors, a plot, a number line). Writes a Unicode sketch into the terminal reply and pushes the rendered version to the learner's live Obsidian Lesson Board. Use whenever teaching something with structure or shape."
+description: "Put a picture in the lesson — a dependency graph, flow, sequence, state machine, tree, comparison, or a spatial/geometric figure (coordinate geometry, vectors, a plot, a number line). Writes a Unicode sketch into the terminal reply and, when an idea earns a real rendering, saves a PNG into the project's viz/ folder. Use whenever teaching something with structure or shape."
 ---
 
 # Visualize
@@ -13,56 +13,16 @@ So the bar is not "would a diagram be nice here." The bar is **"does this idea h
 
 **The Claude Code terminal renders nothing.** No images, no ```mermaid```, no LaTeX. A mermaid fence in a reply reaches the learner as *source code*; `$\alpha$` reaches them as `$\alpha$`. This has been verified against this machine's Claude Code build — do not assume otherwise.
 
-That gives every visual **two destinations**, and a good one uses both:
+That gives every visual **two possible forms**:
 
-| Destination | Renders | Gets |
+| Form | Renders | Gets |
 |---|---|---|
-| The reply, in the terminal | Unicode/ASCII only | a small sketch they see **immediately**, without looking away |
-| The **Lesson Board** in Obsidian | mermaid, LaTeX, images | the real diagram, rendered, live |
+| A Unicode/ASCII sketch, in the reply | always, everywhere | a small picture they see **immediately**, without looking away |
+| A rendered PNG, saved into the project's `viz/` folder | opened by hand, in any image viewer | the real diagram — properly laid out, geometrically exact |
 
-Neither replaces the other. The sketch keeps the picture in the flow of reading; the board is where the picture is actually *good*.
+Neither replaces the other. The sketch keeps the picture in the flow of reading; a rendered file is where the picture is actually *good*, for the ideas that earn the round-trip.
 
-## The Lesson Board
-
-One note the learner keeps open in Obsidian beside the terminal. It receives **only the visual half of the lesson** — diagrams, graphs, display math. Never dialogue, never explanation, never a transcript. It is truncated at the start of each lesson, so it holds one lesson at a time and stays scannable.
-
-Start it once, at the top of the teaching phase:
-
-```bash
-node .claude/skills/visualize/board.mjs start <vault> --title "<lesson topic>"
-```
-
-Then push each visual as you make it. Markdown body comes from a heredoc and **requires `--stdin`** (without that flag stdin isn't read at all — this is deliberate, reading it unconditionally hangs):
-
-```bash
-node .claude/skills/visualize/board.mjs add <vault> --caption "Everything harmonic comes from the 12 semitones" --stdin <<'EOF'
-```mermaid
-graph TD
-  A[12 semitones] --> B[intervals]
-  A --> C[scales]
-  B --> D[chords]
-  C --> D
-```
-EOF
-```
-
-Display math goes to the board the same way — it's the only place the learner will actually see it typeset:
-
-```bash
-node .claude/skills/visualize/board.mjs add <vault> --caption "Bayes, in one line" --stdin <<'EOF'
-$$P(H \mid E) = \frac{P(E \mid H)\,P(H)}{P(E)}$$
-EOF
-```
-
-A rendered PNG is copied into the vault and embedded in one step — no heredoc, no `--stdin`:
-
-```bash
-node .claude/skills/visualize/board.mjs add <vault> --caption "The forces on a suspended mass" --image viz/<file>.png
-```
-
-`board.mjs where <vault>` prints the path. Tell the learner where it is, once, at the start — then stop mentioning it.
-
-## Pick the cheapest tool that carries the idea
+## Pick the cheapest form that carries the idea
 
 **1. Unicode sketch in the reply — always, for anything with structure.** Costs nothing, needs nothing, and it's the only picture that lands where they're already looking:
 
@@ -74,13 +34,11 @@ node .claude/skills/visualize/board.mjs add <vault> --caption "The forces on a s
         chords
 ```
 
-Keep it small — five or six elements. It's a thumbnail, not the diagram.
+Keep it small — five or six elements. It's a thumbnail, not the diagram. For most nodes in a lesson, this is enough on its own — stop here.
 
-**2. Inline mermaid → the board.** Nodes and edges: dependency graphs, flows, pipelines, sequences, state machines, trees, containment. You write the fence yourself and push it with `board.mjs add`. No subagent, no render, no waiting, and it cannot fail.
+**2. `mermaid-maker` — when the idea is worth a properly laid-out diagram.** Nodes and edges: dependency graphs, flows, pipelines, sequences, state machines, trees, containment. It renders to PNG, **looks at it**, iterates, and publishes the result to `viz/`. Costs a round-trip; buys a diagram that's actually correct and readable, not just a sketch.
 
-**3. `mermaid-maker` — when layout is at risk.** If a graph is dense enough that it might come out overlapping or clipped, and being wrong would mislead, hand it to the maker: it renders to PNG, **looks at it**, iterates, returns a file. Costs a round-trip; buys a guarantee.
-
-**4. `svg-maker` — for real geometry.** Exact coordinates, vectors, angles, function plots, number lines, physical layouts — anything mermaid's auto-layout cannot express.
+**3. `svg-maker` — for real geometry.** Exact coordinates, vectors, angles, function plots, number lines, physical layouts — anything a Unicode sketch can't honestly represent and mermaid's auto-layout can't express either.
 
 ```
 Agent(subagent_type: "mermaid-maker", prompt: "<minimal, concrete brief>")
@@ -95,36 +53,15 @@ filename: viz-<slug>-<timestamp>.png
 path: <cwd>/viz/viz-<slug>-<timestamp>.png
 ```
 
-Push that file to the board with `--image`. Don't paste `![[...]]` into your reply — the terminal shows it as literal text; `board.mjs` writes the embed where it will actually render.
+**Tell the learner the path, once, in the reply** — `saved to viz/viz-<slug>-<timestamp>.png` — so they can open it if they want to see the real rendering. Don't paste `![[...]]` or `![...]()` into the reply expecting it to render; the terminal shows either as literal text.
 
-## Mermaid that won't parse
-
-`board.mjs` lints every mermaid block and **refuses** ones it can see are broken, because a diagram that fails to parse renders in Obsidian as an error box while the lesson carries on believing it drew a picture. If you get `REJECTED`, fix and re-send — don't reach for `--no-lint`.
-
-The traps that actually come up:
-
-- **Reserved words as class names.** `classDef click …` / `A:::click` kills the whole graph — `click` is mermaid's node-interactivity keyword. Same for `class`, `graph`, `subgraph`, `end`, `style`, `link`, `href`, `default`, `direction`. Rename the class (`keystone`, `known`, `goal`) — it's the name that's illegal, not the styling.
-- **A node whose id is `end`.** `A --> end[done]` fails to parse. Call it `finish`. (`subgraph … end` is fine — that's the real keyword doing its job.)
-- **Unquoted labels with punctuation.** Anything containing `(`, `)`, `:`, `,` or `-` needs quotes: `A["v' = A⁻¹v (contravariant)"]`. Use `<br/>` for line breaks inside them.
-
-Colour is worth it on a plan graph — it's what makes "what I already know" visually separable from "where we're going":
-
-````
-```mermaid
-graph TD
-  A["supply and demand<br/>(known)"]:::known
-  B["why a price carries information"]:::keystone
-  A --> B
-  classDef known fill:#dbeafe,stroke:#2563eb
-  classDef keystone fill:#fef08a,stroke:#ca8a04
-```
-````
+If `/recap` runs later, any PNG still sitting in `viz/` from this session gets folded into the permanent note automatically — you don't need to do anything extra now to make that happen.
 
 ## When a maker fails, you still ship a picture
 
 Makers fail: overloaded subagents, a missing renderer, a brief that won't compose. That must **never** silently become a lesson with no visual. On `RESULT: NONE` or an error:
 
-1. **Fall back to inline mermaid on the board.** Most "needs a picture" ideas have a nodes-and-edges version that's 80% as good and costs nothing.
+1. **Fall back to a fuller Unicode sketch in the reply.** Most "needs a picture" ideas have a nodes-and-edges version that's legible in plain text.
 2. **If it's truly geometric,** fall back to a Unicode sketch plus a coordinate table. A rough true picture beats no picture.
 3. **Say nothing about the failure.** The learner is here to learn, not to hear about subagent errors.
 

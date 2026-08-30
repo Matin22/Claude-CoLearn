@@ -20,7 +20,7 @@ One teaching loop, zero subject-specific tuning.
 
 Most "explain X" prompting gives you a pile of disconnected facts that feel true in the moment and evaporate a week later. Claude CoLearn is built on a different claim: **understanding is a graph, not a list.**
 
-It runs a **probe → plan → teach** loop that finds the edge of what you already know, teaches from there one dependency at a time, puts every diagram on a live Obsidian board next to your terminal, and — when you stop — compresses the whole session into one revision note you can actually study from later.
+It runs a **probe → plan → teach** loop that finds the edge of what you already know, teaches from there one dependency at a time, renders a real diagram whenever an idea earns one, and — when you stop — compresses the whole session into one revision note you can actually study from later.
 
 Two teaching principles drive all of it, and they're about how minds accept facts — not about any subject. That's why the same machinery teaches a proof and a chord progression.
 
@@ -44,7 +44,7 @@ brew install librsvg                                  # macOS — see Requiremen
 node .claude/skills/run-claude-learn/driver.mjs
 ```
 
-This runs **17 checks** and exits non-zero if anything is wrong. Do this *before* your first real session — without a renderer, diagrams fail silently.
+This runs **15 checks** and exits non-zero if anything is wrong. Do this *before* your first real session — without a renderer, diagrams fail silently.
 
 ## Getting started
 
@@ -66,11 +66,13 @@ When you're done:
 
 ### Themes, not sessions
 
-Learning is organized by **theme** — one Obsidian note per subject that gets deeper every sitting, instead of a pile of dated fragments. Bind one and it sticks:
+Learning is organized by **theme** — one note per subject that gets deeper every sitting, instead of a pile of dated fragments. Bind one and it sticks:
 
 ```
 > /learn 02 Concepts/Bayesian Inference.md
 ```
+
+The note can live in an Obsidian vault, or in a plain file in your project if you're not using Obsidian — `/learn` offers "just this project" as a real option, never assumes a vault.
 
 From then on, `teach` **reads that note before it teaches you**:
 
@@ -119,24 +121,21 @@ Layered on top: concrete before abstract, worked example → completion → inde
 
 ### The visuals
 
-**The Claude Code terminal renders no images, no mermaid, and no LaTeX.** So visuals get a deliberate destination: a **Lesson Board** — one Obsidian note you keep open beside the terminal that receives *only* the lesson's diagrams, graphs, and display math. Never dialogue. It's truncated at the start of each lesson, so it holds one lesson at a time and never turns into a transcript.
-
-Replies also carry a small Unicode sketch, so there's always a picture where you're already reading.
+**The Claude Code terminal renders no images, no mermaid, and no LaTeX.** So every reply carries a small Unicode sketch — the picture you see without looking away — and, whenever an idea earns a properly laid-out diagram, a subagent renders a real PNG straight into your project's `viz/` folder, no setup required.
 
 | Kind of picture | Made by | Cost |
 |---|---|---|
 | Unicode sketch in the reply | written inline | free |
-| Dependency graph, flow, sequence, state machine | mermaid written inline, pushed to the board | free |
-| Dense graph where layout could break | `mermaid-maker` subagent — renders, **looks at it**, iterates | one round-trip |
+| Dependency graph, flow, sequence, state machine | `mermaid-maker` subagent — renders, **looks at it**, iterates | one round-trip |
 | Coordinate geometry, vectors, plots, number lines | `svg-maker` subagent — same render-and-look loop | one round-trip |
 
-If a maker fails, the lesson falls back to inline mermaid rather than silently shipping no picture.
+If a maker fails, the lesson falls back to a fuller Unicode sketch rather than silently shipping no picture.
 
 ### The notes
 
-`/recap` writes **one standalone revision note** into your Obsidian vault. Not a transcript — nobody re-reads a conversation. It carries the compression (the whole session in a paragraph), the dependency graph, the rediscovery path, a worked example, and the mistakes you actually made. The test every line has to pass: *would this still work for someone who wasn't there?*
+`/recap` writes **one standalone revision note** — into your Obsidian vault, or a plain local file if you're not using Obsidian. Not a transcript — nobody re-reads a conversation. It carries the compression (the whole session in a paragraph), the dependency graph, the rediscovery path, a worked example, and the mistakes you actually made. The test every line has to pass: *would this still work for someone who wasn't there?*
 
-It reads your vault's existing conventions and writes into them rather than imposing its own. It asks which vault and folder rather than assuming, copies the session's diagrams in so the embeds resolve, and if the note already exists, it reads and revises it in place instead of overwriting.
+It reads your vault's existing conventions and writes into them rather than imposing its own. It asks where to write rather than assuming — **"just this project, no Obsidian" is always offered, not a fallback** — copies the session's diagrams in so the embeds resolve, and if the note already exists, it reads and revises it in place instead of overwriting.
 
 ## Commands and pieces
 
@@ -147,7 +146,7 @@ It reads your vault's existing conventions and writes into them rather than impo
 | **`/learn <note>`** | Bind a theme note. Persists across sessions; switch by binding another. |
 | **`/recap`** | Fold the session into the bound theme note, or write a standalone one if none is bound. |
 | **`researcher`, `mermaid-maker`, `svg-maker`** | Subagents the above delegate to. You can invoke them by hand ("have the researcher fact-check X") but normally don't. |
-| **`run-claude-learn`** | Verification. `driver.mjs` checks renderers, vault plumbing, and skill discovery. |
+| **`run-claude-learn`** | Verification. `driver.mjs` checks renderers, note-writing plumbing, and skill discovery. |
 
 <details>
 <summary><strong>Full file layout</strong></summary>
@@ -156,12 +155,11 @@ It reads your vault's existing conventions and writes into them rather than impo
 skills/
   teach/SKILL.md              the philosophy + probe → plan → teach loop
   visualize/SKILL.md          when a picture earns its place, and which maker
-  visualize/board.mjs         the live Lesson Board
   recap/SKILL.md              what a note worth re-reading contains
   recap/vault.mjs             vault discovery, attachments, safe note creation
   recap/theme.mjs             theme binding — the note a subject accumulates into
   run-claude-learn/SKILL.md   how to run and verify all of it
-  run-claude-learn/driver.mjs the 17-check smoke suite
+  run-claude-learn/driver.mjs the 15-check smoke suite
 agents/
   researcher.md               fact-checks and scopes topics before they're taught
   mermaid-maker.md            structural diagrams
@@ -169,7 +167,7 @@ agents/
 commands/
   learn.md, recap.md          /learn and /recap
 lib/
-  obsidian.mjs                shared vault plumbing
+  obsidian.mjs                vault plumbing — used only if you opt into Obsidian
 settings.json                  permission allowlist for the render commands
 ```
 
@@ -186,11 +184,11 @@ settings.json                  permission allowlist for the render commands
 
 Change any of these by editing `model:` in that agent's frontmatter.
 
-## Obsidian setup
+## Obsidian is optional
 
-Nothing to configure — the system reads Obsidian's own vault registry and each vault's `app.json` to find your vaults, your attachment folder, and whether you use wikilinks. It asks which vault to use rather than guessing.
+Nothing requires it. `/learn` and `/recap` always offer **"just this project — no Obsidian"** as a first-class choice, not a fallback — pick it and your theme note and recap notes are plain files in your project, diagrams referenced by relative path.
 
-Keep the Lesson Board open beside your terminal while you learn; that's where the diagrams and the typeset math appear.
+If you *do* use Obsidian, there's nothing to configure — the system reads Obsidian's own vault registry and each vault's `app.json` to find your vaults, your attachment folder, and whether you use wikilinks. It asks which vault to use rather than guessing.
 
 ## Requirements
 

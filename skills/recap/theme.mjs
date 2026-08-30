@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 /**
- * theme.mjs — bind a learning theme to ONE Obsidian note.
+ * theme.mjs — bind a learning theme to ONE note.
  *
  * The system is theme-based, not session-based: you learn "Bayesian
  * inference" or "counterpoint" over many sittings, and all of it belongs in
  * a single note that gets deeper each time rather than a pile of dated ones.
+ *
+ * The note can live in an Obsidian vault, or in a plain local folder (pass
+ * the project root as <vault>) — Obsidian is never required.
  *
  * Binding does two jobs, and the second is the one that matters:
  *
@@ -17,7 +20,7 @@
  * themes is just binding another note.
  *
  *   bind <vault> <relpath> [--title T]   create if missing, make it current
- *   current                              the current theme + its board path
+ *   current                              the current theme note
  *   unbind                               stop targeting a theme
  *   list                                 themes bound before, most recent first
  */
@@ -56,20 +59,12 @@ function writeState(state) {
 	fs.writeFileSync(STATE, JSON.stringify(state, null, 2), "utf8");
 }
 
-/** The live board sits beside its theme note, so both open together. */
-function boardRelFor(noteRel) {
-	const dir = path.dirname(noteRel);
-	const base = path.basename(noteRel, ".md");
-	return path.join(dir === "." ? "" : dir, `${base} — Board.md`);
-}
-
 function describe(entry, label) {
 	const abs = path.join(entry.vault, entry.note);
 	const exists = fs.existsSync(abs);
 	console.log(`${label}  ${entry.title}`);
 	console.log(`  vault: ${entry.vault}`);
 	console.log(`  note:  ${abs}${exists ? "" : "   (MISSING — recreate or rebind)"}`);
-	console.log(`  board: ${path.join(entry.vault, boardRelFor(entry.note))}`);
 	if (exists) {
 		const src = fs.readFileSync(abs, "utf8");
 		const heads = src.split("\n").filter((l) => /^##\s+/.test(l)).map((l) => l.replace(/^##\s+/, ""));
@@ -155,13 +150,13 @@ if (cmd === "list") {
 	process.exit(0);
 }
 
-console.log(`theme.mjs — bind a learning theme to one Obsidian note
+console.log(`theme.mjs — bind a learning theme to one note
 
   bind <vault> <relpath> [--title T]   create if missing, make it current
-  current                              the current theme + its board path
+  current                              the current theme note
   unbind                               stop targeting a theme
   list                                 themes bound before, most recent first
 
-<vault> is a registered vault NAME or an absolute path.
-The board note is derived from the theme note: "<Theme> — Board.md" beside it.`);
+<vault> is a registered Obsidian vault NAME, or any absolute directory path
+(pass the project root itself to keep a theme entirely local, no Obsidian).`);
 process.exit(cmd ? 1 : 0);

@@ -176,7 +176,6 @@ if (runAll || only("vault")) {
 		JSON.stringify({ attachmentFolderPath: "99 Meta/Attachments", useMarkdownLinks: false, newFileFolderPath: "00 Inbox" }),
 	);
 	const VAULT = path.join(ROOT, "skills", "recap", "vault.mjs");
-	const BOARD = path.join(ROOT, "skills", "visualize", "board.mjs");
 
 	check("vault.mjs: reads a vault's own config", () => {
 		const out = node(VAULT, ["folders", fixture]);
@@ -206,47 +205,7 @@ if (runAll || only("vault")) {
 		return "blocked";
 	});
 
-	check("board.mjs: start truncates, add appends, embed matches link style", () => {
-		const board = path.join(fixture, "00 Inbox", "Lesson Board.md");
-		node(BOARD, ["start", fixture, "--title", "Driver probe"]);
-		assert(fs.existsSync(board), "board not created");
-
-		// an image to embed
-		const viz = path.join(ROOT, "viz");
-		fs.mkdirSync(viz, { recursive: true });
-		const png = path.join(viz, `viz-driver-probe-${Date.now()}.png`);
-		// 1x1 PNG — enough to prove the copy+embed path, no renderer needed
-		fs.writeFileSync(png, Buffer.from("89504e470d0a1a0a0000000d494844520000000100000001080600000" + "01f15c4890000000a49444154789c6300010000050001" + "0d0a2db40000000049454e44ae426082", "hex"));
-		const out = node(BOARD, ["add", fixture, "--caption", "probe", "--image", path.relative(ROOT, png)]);
-		assert(out.startsWith("ADDED"), `add failed: ${out}`);
-
-		const body = fs.readFileSync(board, "utf8");
-		assert(body.includes("## probe"), "caption missing from board");
-		assert(/!\[\[viz-driver-probe-\d+\.png\|560\]\]/.test(body), `wikilink embed missing:\n${body}`);
-		assert(fs.existsSync(path.join(fixture, "99 Meta", "Attachments", path.basename(png))), "image not copied into vault");
-
-		// start again must WIPE it — the board is never a transcript
-		node(BOARD, ["start", fixture, "--title", "Second lesson"]);
-		const after = fs.readFileSync(board, "utf8");
-		assert(!after.includes("## probe"), "start did not truncate — the board would accumulate into a transcript");
-
-		fs.rmSync(png, { force: true });
-		return "start/add/truncate ok";
-	});
-
-	check("board.mjs: add --image does not hang without stdin", () => {
-		// Regression: reading stdin unconditionally blocked forever under an
-		// agent shell, where stdin is an inherited pipe that never closes.
-		const started = Date.now();
-		try {
-			node(BOARD, ["add", fixture], { timeout: 15000 });
-		} catch (e) {
-			assert(!/ETIMEDOUT|SIGTERM/.test(String(e.message)), "board.mjs add HUNG waiting on stdin");
-		}
-		return `returned in ${Date.now() - started}ms`;
-	});
-
-	check("theme.mjs: bind creates, rebind preserves, board path derives", () => {
+	check("theme.mjs: bind creates, rebind preserves", () => {
 		const THEME = path.join(ROOT, "skills", "recap", "theme.mjs");
 		// Binding writes machine-local state; stash and restore the real one so
 		// running the driver never clobbers whatever theme the user is on.
@@ -257,7 +216,6 @@ if (runAll || only("vault")) {
 			const created = node(THEME, ["bind", fixture, rel, "--title", "Driver Theme"]);
 			assert(created.startsWith("CREATED"), `expected CREATED, got: ${created.split("\n")[0]}`);
 			assert(fs.existsSync(path.join(fixture, rel)), "theme note not created");
-			assert(/Driver Theme — Board\.md/.test(created), `board path not derived from note name:\n${created}`);
 
 			// Re-binding must not clobber a note that already has content.
 			fs.appendFileSync(path.join(fixture, rel), "\n## Key ideas\n\n- something learned\n");
@@ -287,27 +245,24 @@ if (runAll || only("vault")) {
 		}
 	});
 
-	check("board.mjs: rejects mermaid that cannot render", () => {
-		// Regression: a real session produced `classDef click` — `click` is a
-		// reserved mermaid keyword, so the whole graph failed to parse and
-		// Obsidian rendered an error box. Nothing upstream noticed.
-		const broken = '```mermaid\ngraph TD\n  A[x]:::click\n  classDef click fill:#eee\n```\n';
-		let rejected = false;
-		let out = "";
+	check("obsidian.mjs: a plain local folder defaults to markdown links, not wikilinks", () => {
+		// A folder with no .obsidian/app.json is the "no Obsidian" case /learn and
+		// /recap now offer. It must not default to Obsidian's own wikilink style,
+		// which is dead text outside Obsidian.
+		const local = fs.mkdtempSync(path.join(os.tmpdir(), "learn-local-"));
+		const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), "learn-local-src-"));
 		try {
-			node(BOARD, ["add", fixture, "--caption", "lint", "--stdin"], { input: broken });
-		} catch (e) {
-			rejected = true;
-			out = String(e.stdout || "");
+			const png = path.join(srcDir, "probe.png");
+			fs.writeFileSync(png, Buffer.from("89504e470d0a1a0a0000000d494844520000000100000001080600000" + "01f15c4890000000a49444154789c6300010000050001" + "0d0a2db40000000049454e44ae426082", "hex"));
+			const out = node(VAULT, ["attach", local, png]);
+			assert(out.startsWith("OK"), `attach failed: ${out}`);
+			assert(!/\[\[/.test(out), `local folder produced a wikilink embed, expected markdown: ${out}`);
+			assert(/!\[\]\(/.test(out), `expected a markdown image link, got: ${out}`);
+			return "markdown links ok";
+		} finally {
+			fs.rmSync(local, { recursive: true, force: true });
+			fs.rmSync(srcDir, { recursive: true, force: true });
 		}
-		assert(rejected, "broken mermaid was ACCEPTED onto the board");
-		assert(/REJECTED/.test(out), `expected a REJECTED diagnostic, got: ${out.slice(0, 200)}`);
-
-		// ...and a legitimate `subgraph ... end` must still pass
-		const fine = '```mermaid\ngraph TD\n  subgraph L\n    A[x] --> B[y]\n  end\n```\n';
-		const ok = node(BOARD, ["add", fixture, "--caption", "lint-ok", "--stdin"], { input: fine });
-		assert(ok.startsWith("ADDED"), `valid mermaid was rejected: ${ok}`);
-		return "rejects reserved keywords, passes subgraph/end";
 	});
 
 	fs.rmSync(fixture, { recursive: true, force: true });
