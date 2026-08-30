@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mktemp:*)",
+      "Bash(mkdir:*)",
+      "Bash(rsvg-convert:*)",
+      "Bash(magick:*)",
+      "Bash(npx -y @mermaid-js/mermaid-cli:*)",
+      "Bash(node .claude/skills/recap/vault.mjs:*)",
+      "Bash(node .claude/skills/run-claude-learn/driver.mjs:*)"
+    ]
+  }
+}
