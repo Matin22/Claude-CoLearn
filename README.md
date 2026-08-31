@@ -216,3 +216,7 @@ The system ships **blank** — it assumes nothing about who you are or what you 
 If you get tired of it rediscovering you, `skills/teach/SKILL.md` opens with an **About the learner** section, empty by default. Record what's durable there — fields you already have solid footing in, how long you want probing to run, how much Socratic back-and-forth you like, how formal you want it — and every session starts from that instead.
 
 Everything else is general on purpose. Don't narrow it to one subject; the whole point is that the same loop teaches you a proof and a chord progression.
+
+---
+
+MIT licensed. Based on original work by [Amos Blomqvist](https://github.com/amosblomqvist/learn).
